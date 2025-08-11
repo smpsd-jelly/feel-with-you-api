@@ -16,11 +16,9 @@ module.exports = {
           model: "users",
           key: "id",
         },
-        onUpdate: "CASCADE",
-        onDelete: "SET NULL",
       },
       status: {
-        type: Sequelize.INT,
+        type: Sequelize.INTEGER,
       },
       created_at: {
         type: Sequelize.DATE,

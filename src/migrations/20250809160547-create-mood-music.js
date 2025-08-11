@@ -16,8 +16,6 @@ module.exports = {
           model: "mood",
           key: "id",
         },
-        onUpdate: "CASCADE",
-        onDelete: "SET NULL",
       },
       music_url: {
         type: Sequelize.TEXT,

@@ -16,15 +16,13 @@ module.exports = {
           model: "users",
           key: "id",
         },
-        onUpdate: "CASCADE",
-        onDelete: "SET NULL",
       },
       note_text: {
         type: Sequelize.TEXT,
         allowNull: true,
       },
       note_date: {
-        type: Sequelize.date,
+        type: Sequelize.DATE,
         allowNull: true,
       },
       created_at: {

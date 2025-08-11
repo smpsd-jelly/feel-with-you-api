@@ -11,13 +11,11 @@ module.exports = {
       },
       user_note_id: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: "user_note",
           key: "id",
         },
-        onUpdate: "CASCADE",
-        onDelete: "SET NULL",
       },
       img_url: {
         type: Sequelize.TEXT,

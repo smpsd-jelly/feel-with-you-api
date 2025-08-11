@@ -16,18 +16,14 @@ module.exports = {
           model: "users",
           key: "id",
         },
-        onUpdate: "CASCADE",
-        onDelete: "SET NULL",
       },
       mood_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
-          model: "users",
+          model: "mood",
           key: "id",
         },
-        onUpdate: "CASCADE",
-        onDelete: "SET NULL",
       },
       mood_date: {
         type: Sequelize.DATE,

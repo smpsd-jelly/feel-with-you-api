@@ -14,7 +14,7 @@ module.exports = {
         allowNull: false,
       },
       status: {
-        type: Sequelize.INT,
+        type: Sequelize.INTEGER,
       },
       created_at: {
         type: Sequelize.DATE,
