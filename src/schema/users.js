@@ -1,4 +1,4 @@
-const { gql } = require('apollo-server-express');
+const { gql } = require("apollo-server-express");
 
 module.exports = gql`
   type User {
@@ -13,9 +13,11 @@ module.exports = gql`
 
   type Query {
     getUserById(id: Int!): User
+    getUserByEmail(email: String!): User
   }
 
   type Mutation {
-    addUser(email: String!, name: String, level: Int): User
+    addUser(email: String!, name: String): User
+    updateUser(email: String!, name: String, first_login: String): User
   }
 `;
