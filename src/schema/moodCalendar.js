@@ -24,7 +24,11 @@ module.exports = gql`
   }
 
   type Query {
-    getMoodCalendarByUserId(user_id: Int!): [MoodCalendar!]!
+    getMoodCalendarByUserId(
+      user_id: Int!
+      start: String
+      end: String
+    ): [MoodCalendar!]!
   }
 
   type Mutation {

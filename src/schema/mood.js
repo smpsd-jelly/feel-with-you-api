@@ -9,5 +9,8 @@ module.exports = gql`
 
   type Query {
     getMoodById(id: Int!): Mood
+    getMoodByName(name: String!): Mood
+    moods: [Mood!]!
   }
+    
 `;
