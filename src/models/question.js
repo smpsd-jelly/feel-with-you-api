@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       status: {
-        type: DataTypes.INTEGER, 
+        type: DataTypes.INTEGER,
       },
       created_at: {
         type: DataTypes.DATE,
@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       tableName: 'question',
-      timestamps: false, 
+      timestamps: false,
     }
   );
 
