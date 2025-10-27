@@ -23,6 +23,11 @@ module.exports = {
         name: 'gloomy',
         img_url: '/images/EmotionPic/emotion1.png',
       },
+       {
+        id: 5,
+        name: 'default',
+        img_url: '/images/EmotionPic/cloud-default.png',
+      },
     ], {});
   },
 

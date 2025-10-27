@@ -10,13 +10,8 @@ const fs = require('fs');
 async function startServer() {
   const app = express();
 
-  // setting image path local 
   const IMAGES_DIR = path.resolve(process.cwd(), 'images');
-
-  // Serve /images/ from that folder
   app.use('/images', express.static(IMAGES_DIR));
-
-  // debug endpoint
   app.get('/__debug_static', (req, res) => {
     res.json({
       cwd: process.cwd(),
@@ -26,20 +21,24 @@ async function startServer() {
     });
   });
 
-  // Allow Next.js origin
-  app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
-
+  // ✅ อนุญาต origin ของ Next.js และ Apollo Studio
+  app.use(cors({
+    origin: [
+      'http://localhost:3000',
+      'https://studio.apollographql.com',
+    ],
+    credentials: true,
+  }));
 
   const server = new ApolloServer({
     typeDefs,
     resolvers,
-    context: ({ req }) => {
-      return { req };
-    },
+    introspection: true, // ✅ ให้ Studio อ่านสคีมาได้
+    context: ({ req, res }) => ({ req, res }),
   });
 
   await server.start();
-  server.applyMiddleware({ app });
+  server.applyMiddleware({ app, path: '/graphql' });
 
   db.sequelize.sync().then(() => {
     app.listen({ port: 4000 }, () => {
