@@ -1,5 +1,5 @@
-const { Sequelize } = require('sequelize')
-require('dotenv').config()
+const { Sequelize } = require("sequelize");
+require("dotenv").config();
 
 module.exports = {
   development: {
@@ -7,17 +7,17 @@ module.exports = {
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT  ,3306),
-    dialect: 'mysql',
-    timezone: '+07:00',
+    port: Number(process.env.DB_PORT || 3306),
+    dialect: "mysql",
+    timezone: "+07:00",
   },
   production: {
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT  ,3306),
-    dialect: 'mysql',
-    timezone: '+07:00',
+    port: Number(process.env.DB_PORT || 3306),
+    dialect: "mysql",
+    timezone: "+07:00",
   },
 };
