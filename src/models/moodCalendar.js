@@ -12,6 +12,7 @@ module.exports = (sequelize, DataTypes) => {
       mood_id: { type: DataTypes.INTEGER, allowNull: false },
       mood_date: { type: DataTypes.DATE, allowNull: false },
       created_at: { type: DataTypes.DATE },
+      updated_at: { type: DataTypes.DATE }
     },
     {
       tableName: "mood_calendar",

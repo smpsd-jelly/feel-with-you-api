@@ -30,9 +30,20 @@ module.exports = {
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
     });
+    await queryInterface.addConstraint("user_note", {
+      fields: ["user_id", "note_date"],
+      type: "unique",
+      name: "ux_user_note_userid_note_date",
+    });
   },
 
   down: async (queryInterface) => {
+    await queryInterface.removeConstraint(
+      "user_note",
+      "ux_user_note_userid_note_date"
+    );
+    await queryInterface.removeIndex("user_note");
     await queryInterface.dropTable("user_note");
   },
 };
+
