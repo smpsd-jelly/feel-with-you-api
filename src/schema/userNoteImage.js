@@ -10,7 +10,7 @@ module.exports = gql`
   }
 
   input CreateUserNoteImageInput {
-    user_note_id: Int
+    user_note_id: Int 
     img_url: String!
   }
 

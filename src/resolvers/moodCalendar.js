@@ -72,7 +72,10 @@ const moodCalendarResolvers = {
         let result;
         if (existing) {
           // อัปเดต mood ของวันเดิม
-          await existing.update({ mood_id }, { transaction: queryRunner });
+          await existing.update({ 
+            mood_id, 
+            updated_at: new Date() }, 
+            { transaction: queryRunner });
           result = await MoodCalendar.findByPk(existing.id, {
             include: [
               {
@@ -93,7 +96,7 @@ const moodCalendarResolvers = {
             {
               user_id,
               mood_id,
-              mood_date: new Date(mood_date),
+              mood_date: mood_date ?? new Date(),
               created_at: new Date(),
             },
             { transaction: queryRunner }

@@ -22,6 +22,18 @@ const userNoteResolvers = {
       try {
         const { user_id, note_text, note_date } = input;
 
+        // ตรวจสอบว่ามีการสร้างโน้ตในวันเดียวกันแล้วหรือไม่
+        const dateOnly = note_date
+          ? new Date(note_date).toISOString().slice(0, 10)
+          : new Date().toISOString().slice(0, 10);
+
+        const existing = await UserNote.findOne({
+          where: { user_id, note_date: dateOnly },
+        });
+        if (existing) {
+          throw new Error("You already created a note for today.");
+        }
+
         const created = await UserNote.create({
           user_id,
           note_text: note_text ?? null,

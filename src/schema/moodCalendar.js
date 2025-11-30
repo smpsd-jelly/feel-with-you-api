@@ -12,7 +12,8 @@ module.exports = gql`
     user_id: Int!
     mood_id: Int!
     mood_date: String!
-    created_at: String
+    created_at: String!
+    updated_at: String!
     user: User
     mood: Mood
   }
