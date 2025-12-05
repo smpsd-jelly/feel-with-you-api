@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       user_id: { type: DataTypes.INTEGER, allowNull: false },
       note_text: { type: DataTypes.TEXT, allowNull: true },
-      note_date: { type: DataTypes.DATE, allowNull: true },
+      note_date: { type: DataTypes.DATEONLY, allowNull: false },
       created_at: { type: DataTypes.DATE },
     },
     {
