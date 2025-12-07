@@ -39,10 +39,12 @@ async function startServer() {
 
   server.applyMiddleware({ app, path: "/graphql", cors: false });
 
+  const PORT = process.env.PORT || 4000;
+
   db.sequelize.sync().then(() => {
-    app.listen({ port: 4000 }, () => {
-      console.log(`Server ready at http://localhost:4000${server.graphqlPath}`);
-      console.log(`Static uploads at http://localhost:4000/uploads`);
+    app.listen({ port: PORT }, () => {
+      console.log(`Server ready at http://localhost:${PORT}${server.graphqlPath}`);
+      console.log(`Static uploads at http://localhost:${PORT}/uploads`);
     });
   });
 }
