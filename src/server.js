@@ -1,48 +1,45 @@
-const express = require('express');
-const { ApolloServer } = require('apollo-server-express');
-const typeDefs = require('./schema');
-const resolvers = require('./resolvers');
-const cors = require('cors');
-const path = require('path');
-const db = require('./models');
-const fs = require('fs');
+const express = require("express");
+const { ApolloServer } = require("apollo-server-express");
+const { graphqlUploadExpress, GraphQLUpload } = require("graphql-upload-ts");
+const path = require("path");
+const fs = require("fs");
+const cors = require("cors");
+const typeDefs = require("./schema");
+const resolvers = require("./resolvers");
+const db = require("./models");
 
 async function startServer() {
   const app = express();
 
-  const IMAGES_DIR = path.resolve(process.cwd(), 'images');
-  app.use('/images', express.static(IMAGES_DIR));
-  app.get('/__debug_static', (req, res) => {
-    res.json({
-      cwd: process.cwd(),
-      IMAGES_DIR,
-      exists: fs.existsSync(IMAGES_DIR),
-      files: fs.existsSync(IMAGES_DIR) ? fs.readdirSync(IMAGES_DIR) : [],
-    });
-  });
+  const UPLOAD_ROOT = path.join(process.cwd(), "public", "upload");
+  app.use("/uploads", express.static(UPLOAD_ROOT));
 
-  // ✅ อนุญาต origin ของ Next.js และ Apollo Studio
-  app.use(cors({
-    origin: [
-      'http://localhost:3000',
-      'https://studio.apollographql.com',
-    ],
-    credentials: true,
-  }));
+  app.use(
+    cors({
+      origin: ["http://localhost:3000", "https://studio.apollographql.com"],
+      credentials: true,
+    })
+  );
+
+  app.use(
+    graphqlUploadExpress({ maxFileSize: 20 * 1024 * 1024, maxFiles: 10 })
+  );
 
   const server = new ApolloServer({
     typeDefs,
-    resolvers,
-    introspection: true, // ✅ ให้ Studio อ่านสคีมาได้
+    resolvers: { Upload: GraphQLUpload, ...resolvers },
+    introspection: true,
     context: ({ req, res }) => ({ req, res }),
   });
 
   await server.start();
-  server.applyMiddleware({ app, path: '/graphql' });
+
+  server.applyMiddleware({ app, path: "/graphql", cors: false });
 
   db.sequelize.sync().then(() => {
     app.listen({ port: 4000 }, () => {
       console.log(`Server ready at http://localhost:4000${server.graphqlPath}`);
+      console.log(`Static uploads at http://localhost:4000/uploads`);
     });
   });
 }

@@ -1,4 +1,4 @@
-const { gql } = require('apollo-server-express');
+const { gql } = require("apollo-server-express");
 
 module.exports = gql`
   type MoodMusic {
@@ -11,5 +11,6 @@ module.exports = gql`
 
   type Query {
     getAllMoodMusic: [MoodMusic!]!
+    getMoodMusicByMoodId(mood_id: Int!): [MoodMusic!]!
   }
 `;
