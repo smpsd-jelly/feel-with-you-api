@@ -1,6 +1,7 @@
 const db = require('../models');
 const { Sequelize } = db;
 const { UserQuestionAnswer } = db;
+const { Op } = require("sequelize");
 
 const userQuestionAnswerResolvers = {
   Query: {
@@ -60,6 +61,55 @@ const userQuestionAnswerResolvers = {
       } catch (err) {
         console.error('getUserAnswerStats error:', err);
         throw new Error('Internal Server Error');
+      }
+    },
+  },
+
+  Mutation: {
+    addBulkUserQuestionAnswers: async (_, { user_id, answers }) => {
+      try {
+        // คำนวน Start & End of "Today" in GMT+7
+        const now = new Date();
+        const THAI_OFFSET = 7 * 60 * 60 * 1000;
+        const thaiTime = new Date(now.getTime() + THAI_OFFSET);
+        thaiTime.setUTCHours(0, 0, 0, 0);
+
+        const startOfDay = new Date(thaiTime.getTime() - THAI_OFFSET);
+        const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+
+        // Validation: Check if user has ALREADY submitted answers today
+        const existingSession = await UserQuestionAnswer.findOne({
+          where: {
+            user_id: user_id,
+            created_at: {
+              [Op.gte]: startOfDay,
+              [Op.lt]: endOfDay,
+            },
+          },
+        });
+
+        if (existingSession) {
+          throw new Error("You have already submitted your answers for today. Please try again tomorrow.");
+        }
+
+        // Prepare data for Bulk Insert
+        const dataToInsert = answers.map((answer) => ({
+          user_id: user_id,
+          question_id: answer.question_id,
+          question_status: answer.question_status,
+          question_score: answer.question_score,
+          created_at: now,
+          updated_at: now,
+        }));
+
+        // Perform Bulk Insert
+        const newRecords = await UserQuestionAnswer.bulkCreate(dataToInsert, { validate: true });
+
+        return newRecords;
+      } catch (err) {
+        // log errors in Mutation a
+        console.error('addBulkUserQuestionAnswers error:', err);
+        throw err; // Re-throw so GraphQL returns the error to the client
       }
     },
   },

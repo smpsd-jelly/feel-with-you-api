@@ -11,6 +11,9 @@ const db = require("./models");
 async function startServer() {
   const app = express();
 
+  const IMAGES_ROOT = path.join(process.cwd(), "images");
+  app.use("/images", express.static(IMAGES_ROOT, { fallthrough: false }));
+
   const UPLOAD_ROOT = path.join(process.cwd(), "public", "upload");
   app.use("/uploads", express.static(UPLOAD_ROOT));
 
