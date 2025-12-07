@@ -1,5 +1,6 @@
 const db = require("../models");
-const { UserNote, Users } = db;
+const { Op } = require("sequelize");
+const { UserNote, Users, UserNoteImage } = db;
 
 const userNoteResolvers = {
   Query: {
@@ -15,20 +16,54 @@ const userNoteResolvers = {
         throw new Error("Internal Server Error");
       }
     },
+    getUserNoteByUserAndDate: async (_, { user_id, note_date }) => {
+      try {
+        return await UserNote.findOne({
+          where: { user_id, note_date },
+          include: [
+            { model: Users, as: "user", attributes: ["id", "email", "name"] },
+          ],
+        });
+      } catch (err) {
+        console.error("getUserNoteByUserAndDate error:", err);
+        throw new Error("Internal Server Error");
+      }
+    },
+    getUserNotesByUserAndRange: async (_, { user_id, start, end }) => {
+      return await UserNote.findAll({
+        where: {
+          user_id,
+          note_date: { [Op.between]: [start, end] },
+        },
+        include: [
+          { model: Users, as: "user", attributes: ["id", "email", "name"] },
+          {
+            model: UserNoteImage,
+            as: "images",
+            attributes: ["id", "img_url", "created_at"],
+          },
+        ],
+        order: [
+          ["note_date", "DESC"],
+          ["created_at", "DESC"],
+        ],
+      });
+    },
   },
 
   Mutation: {
     createUserNote: async (_, { input }) => {
+      const { user_id, note_text, note_date } = input;
+
+      // ผูกให้แน่ใจว่าเป็น date-only string
+      const todayStr = note_date
+        ? new Date(note_date).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10);
+
       try {
-        const { user_id, note_text, note_date } = input;
-
-        // ตรวจสอบว่ามีการสร้างโน้ตในวันเดียวกันแล้วหรือไม่
-        const dateOnly = note_date
-          ? new Date(note_date).toISOString().slice(0, 10)
-          : new Date().toISOString().slice(0, 10);
-
+        // เงื่อนไขระดับ app
         const existing = await UserNote.findOne({
-          where: { user_id, note_date: dateOnly },
+          where: { user_id, note_date: todayStr },
         });
         if (existing) {
           throw new Error("You already created a note for today.");
@@ -37,15 +72,14 @@ const userNoteResolvers = {
         const created = await UserNote.create({
           user_id,
           note_text: note_text ?? null,
-          note_date: note_date ? new Date(note_date) : null,
+          note_date: todayStr,
           created_at: new Date(),
         });
 
-        // คืนค่าพร้อม include user
         return await UserNote.findByPk(created.id, {
           include: [
             {
-              model: db.Users,
+              model: Users,
               as: "user",
               attributes: ["id", "email", "name"],
             },
@@ -53,17 +87,77 @@ const userNoteResolvers = {
         });
       } catch (err) {
         console.error("createUserNote error:", err);
+
+        // กันกรณี unique constraint จาก DB ระดับล่างด้วย
+        if (err.name === "SequelizeUniqueConstraintError") {
+          throw new Error("You already created a note for today.");
+        }
+
+        throw new Error("Internal Server Error");
+      }
+    },
+    deleteUserNote: async (_, { id }) => {
+      try {
+        const note = await UserNote.findByPk(id);
+        if (!note) {
+          return false;
+        }
+
+        // ลบรูปทั้งหมดที่ผูกกับ note นี้
+        await UserNoteImage.destroy({
+          where: { user_note_id: id },
+        });
+
+        await UserNote.destroy({
+          where: { id },
+        });
+
+        return true;
+      } catch (err) {
+        console.error("deleteUserNote error:", err);
+        throw new Error("Internal Server Error");
+      }
+    },
+    updateUserNote: async (_, { id, note_text }) => {
+      try {
+        const note = await UserNote.findByPk(id);
+        if (!note) throw new Error("Note not found");
+
+        await UserNote.update(
+          { note_text: note_text ?? null },
+          { where: { id } }
+        );
+
+        return await UserNote.findByPk(id, {
+          include: [
+            { model: Users, as: "user", attributes: ["id", "email", "name"] },
+          ],
+        });
+      } catch (err) {
+        console.error("updateUserNote error:", err);
         throw new Error("Internal Server Error");
       }
     },
   },
 
-  // แปลงวันที่เป็น ISO string (ถ้าต้องการ)
   UserNote: {
-    note_date: (parent) =>
-      parent.note_date ? new Date(parent.note_date).toISOString() : null,
-    created_at: (parent) =>
-      parent.created_at ? new Date(parent.created_at).toISOString() : null,
+    note_date: (p) =>
+      p.note_date ? new Date(p.note_date).toISOString() : null,
+    created_at: (p) =>
+      p.created_at ? new Date(p.created_at).toISOString() : null,
+
+    images: async (parent) => {
+      return await UserNoteImage.findAll({
+        where: { user_note_id: parent.id },
+        order: [["created_at", "ASC"]],
+      });
+    },
+    user: async (parent) => {
+      if (parent.user) return parent.user;
+      return await Users.findByPk(parent.user_id, {
+        attributes: ["id", "email", "name"],
+      });
+    },
   },
 };
 
