@@ -4,7 +4,7 @@ module.exports = gql`
   type Question {
     id: Int!
     question_detail: String!
-    status: Int
+    status: String
     created_at: String
     updated_at: String
   }
