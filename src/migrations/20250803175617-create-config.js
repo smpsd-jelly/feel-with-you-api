@@ -1,24 +1,28 @@
 'use strict';
 
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('question', {
+  async up(queryInterface, Sequelize) {
+    await queryInterface.createTable('config', {
       id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
         autoIncrement: true,
         allowNull: false,
       },
-      question_detail: {
-        type: Sequelize.TEXT,
+      config_code: {
+        type: Sequelize.STRING,
         allowNull: false,
       },
-      status: {
+      config_value: {
         type: Sequelize.STRING,
-        references: {
-          model: "config",
-          key: "config_value",
-        },
+        allowNull: false,
+        unique: true,
+      },
+      config_name_th: {
+        type: Sequelize.STRING,
+      },
+      config_name_en: {
+        type: Sequelize.STRING,
       },
       created_at: {
         type: Sequelize.DATE,
@@ -32,6 +36,7 @@ module.exports = {
   },
 
   down: async (queryInterface) => {
-    await queryInterface.dropTable('question');
+    await queryInterface.dropTable('config');
   },
 };
+

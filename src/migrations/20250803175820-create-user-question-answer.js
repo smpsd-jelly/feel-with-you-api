@@ -17,8 +17,29 @@ module.exports = {
           key: "id",
         },
       },
-      status: {
+      question_id: {
         type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: "question",
+          key: "id",
+        },
+      },
+      question_status: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        references: {
+          model: "config",
+          key: "config_value",
+        },
+      },
+      question_score: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        references: {
+          model: "config",
+          key: "config_value",
+        },
       },
       created_at: {
         type: Sequelize.DATE,

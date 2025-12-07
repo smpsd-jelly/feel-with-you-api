@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       status: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING,
       },
       created_at: {
         type: DataTypes.DATE,
@@ -27,6 +27,14 @@ module.exports = (sequelize, DataTypes) => {
       timestamps: false,
     }
   );
+
+  Question.associate = (models) => {
+    Question.hasMany(models.Config, {
+      foreignKey: "status",
+      as: "config_status",
+    });
+  };
+
 
   return Question;
 };
