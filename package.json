@@ -6,7 +6,7 @@
     "node": "18.x"
   },
   "scripts": {
-    "start": "npx sequelize-cli db:seed:all && node src/server.js",
+    "start": "node node_modules/sequelize-cli/lib/sequelize db:seed:all --env production && node src/server.js",
     "dev": "nodemon src/server.js"
   },
   "keywords": [],
