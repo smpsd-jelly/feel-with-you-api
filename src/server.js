@@ -51,12 +51,19 @@ async function startServer() {
 
   const PORT = process.env.PORT || 4000;
 
-  db.sequelize.sync().then(() => {
-    app.listen({ port: PORT }, () => {
-      console.log(`Server ready at http://0.0.0.0:${PORT}${server.graphqlPath}`);
-      console.log(`Static uploads at http://0.0.0.0:${PORT}/uploads`);
+  console.log("Attempting to connect to the database...");
+
+  db.sequelize.sync()
+    .then(() => {
+      console.log("Database connected!"); 
+      app.listen({ port: PORT }, () => {
+        console.log(`Server ready at http://0.0.0.0:${PORT}${server.graphqlPath}`);
+      });
+    })
+    .catch((err) => {  
+      console.error(" Database Connection Failed:", err);
+      process.exit(1); 
     });
-  });
 }
 
 module.exports = startServer;
