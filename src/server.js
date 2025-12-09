@@ -22,13 +22,12 @@ async function startServer() {
   }
   app.use("/uploads", express.static(UPLOAD_ROOT));
 
-  // --- CRITICAL CHANGE FOR PRODUCTION ---
   app.use(
     cors({
       origin: [
         "http://localhost:3000",
         "https://studio.apollographql.com",
-        process.env.FRONTEND_URL || "*" // Allow your production frontend or ALL (*) for now
+        process.env.FRONTEND_URL || "*"
       ],
       credentials: true,
     })
@@ -42,7 +41,7 @@ async function startServer() {
     typeDefs,
     resolvers: { Upload: GraphQLUpload, ...resolvers },
     introspection: true,
-    cache: "bounded", 
+    cache: "bounded",
     context: ({ req, res }) => ({ req, res }),
   });
 
@@ -54,7 +53,8 @@ async function startServer() {
 
   db.sequelize.sync().then(() => {
     app.listen({ port: PORT }, () => {
-      console.log(`Server ready at http://localhost:${PORT}${server.graphqlPath}`);
+      console.log(`Server ready at http://0.0.0.0:${PORT}${server.graphqlPath}`);
+      console.log(`Static uploads at http://0.0.0.0:${PORT}/uploads`);
     });
   });
 }
