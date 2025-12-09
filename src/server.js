@@ -55,15 +55,19 @@ async function startServer() {
 
   db.sequelize.sync()
     .then(() => {
-      console.log("Database connected!"); 
+      console.log("Database connected!");
       app.listen({ port: PORT }, () => {
         console.log(`Server ready at http://0.0.0.0:${PORT}${server.graphqlPath}`);
       });
     })
-    .catch((err) => {  
+    .catch((err) => {
       console.error(" Database Connection Failed:", err);
-      process.exit(1); 
+      process.exit(1);
     });
+}
+
+if (require.main === module) {
+  startServer();
 }
 
 module.exports = startServer;
