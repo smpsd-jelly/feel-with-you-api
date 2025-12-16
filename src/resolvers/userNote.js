@@ -49,6 +49,15 @@ const userNoteResolvers = {
         ],
       });
     },
+    hasAnyUserNote: async (_, { user_id }) => {
+      try {
+        const count = await UserNote.count({ where: { user_id } });
+        return count > 0;
+      } catch (err) {
+        console.error("hasAnyUserNote error:", err);
+        throw new Error("Internal Server Error");
+      }
+    },
   },
 
   Mutation: {

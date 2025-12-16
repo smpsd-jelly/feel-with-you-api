@@ -1,5 +1,5 @@
 // src/schema/userNoteImage.js
-const { gql } = require("apollo-server-express");
+const gql = require('graphql-tag');
 
 module.exports = gql`
   scalar Upload

@@ -1,4 +1,4 @@
-const { gql } = require("apollo-server-express");
+const gql = require("graphql-tag");
 
 module.exports = gql`
   type UserNote {
@@ -26,6 +26,7 @@ module.exports = gql`
       start: String!
       end: String!
     ): [UserNote!]!
+    hasAnyUserNote(user_id: Int!): Boolean!
   }
 
   type Mutation {
