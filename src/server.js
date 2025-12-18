@@ -21,6 +21,34 @@ const db = require("./models");
 
 require("dotenv").config();
 
+/** ✅ Helper: อ่าน Bearer token */
+function getBearerToken(req) {
+  const h = req.headers.authorization || req.headers.Authorization || "";
+  if (typeof h !== "string") return null;
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : null;
+}
+
+/** ✅ Helper: enforce auth */
+function assertAuth(req) {
+  const expected = process.env.GRAPHQL_API_TOKEN;
+  if (!expected) {
+    // ป้องกันพลาด: ถ้าไม่ตั้งค่า token ไว้ ให้ fail ไปเลยเพื่อความปลอดภัย
+    const err = new Error("Server misconfigured: GRAPHQL_API_TOKEN is missing");
+    err.statusCode = 500;
+    throw err;
+  }
+
+  const token = getBearerToken(req);
+  if (!token || token !== expected) {
+    const err = new Error("Unauthorized");
+    err.statusCode = 401;
+    throw err;
+  }
+
+  return { token };
+}
+
 async function startServer() {
   const app = express();
   const httpServer = http.createServer(app);
@@ -35,14 +63,33 @@ async function startServer() {
   app.use("/uploads", express.static(UPLOAD_ROOT));
 
   // ---------- CORS ----------
-  const corsOptions = {
-    origin: [
-      "http://localhost:3000",
+  const allowList = new Set(
+    [
       "https://studio.apollographql.com",
-      process.env.FRONTEND_URL || "*",
-    ],
+      "http://localhost:3000",
+      process.env.FRONTEND_URL, // ถ้ามี ngrok ให้ใส่ https://xxxx.ngrok-free.app
+    ].filter(Boolean)
+  );
+
+  const corsOptions = {
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // allow non-browser tools
+      if (allowList.has(origin)) return cb(null, true);
+      return cb(new Error(`Not allowed by CORS: ${origin}`));
+    },
     credentials: true,
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: [
+      "content-type",
+      "authorization",
+      "apollo-require-preflight",
+      "x-apollo-operation-name",
+      "apollo-operation-name",
+    ],
   };
+
+  // ✅ ให้ preflight ผ่าน
+  app.options("/graphql", cors(corsOptions));
 
   // IMPORTANT: upload middleware ต้องมาก่อน expressMiddleware
   app.use(
@@ -68,7 +115,17 @@ async function startServer() {
   app.use(
     "/graphql",
     expressMiddleware(server, {
-      context: async ({ req, res }) => ({ req, res }),
+      context: async ({ req, res }) => {
+        // ✅ บังคับตรวจ token “ก่อนทุกกรณี”
+        // ถ้าอยาก whitelist บาง query (เช่น login) ค่อยเพิ่มเงื่อนไขเองทีหลัง
+        const auth = assertAuth(req);
+
+        return {
+          req,
+          res,
+          auth, // { token }
+        };
+      },
     })
   );
 
@@ -76,11 +133,10 @@ async function startServer() {
 
   console.log("Attempting to connect to the database...");
 
-
   try {
     await db.sequelize.sync();
     console.log("Database connected!");
- 
+
     await new Promise((resolve) => httpServer.listen({ port: PORT }, resolve));
     console.log(`Server ready at http://0.0.0.0:${PORT}/graphql`);
   } catch (err) {
