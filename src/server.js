@@ -125,12 +125,19 @@ async function startServer() {
       context: async ({ req, res }) => {
         // ✅ บังคับตรวจ token “ก่อนทุกกรณี”
         // ถ้าอยาก whitelist บาง query (เช่น login) ค่อยเพิ่มเงื่อนไขเองทีหลัง
+        // ✅ FIX: Allow "IntrospectionQuery" (Playground) to bypass Auth
+        // This stops the log spam from the Apollo Sandbox
+        if (req.body && req.body.operationName === 'IntrospectionQuery') {
+          return { req, res, auth: null };
+        }
+
+        // Check token for everything else
         const auth = assertAuth(req);
 
         return {
           req,
           res,
-          auth, // { token }
+          auth,
         };
       },
     })
