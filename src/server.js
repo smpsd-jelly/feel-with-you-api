@@ -32,6 +32,11 @@ function getBearerToken(req) {
 /** ✅ Helper: enforce auth */
 function assertAuth(req) {
   const expected = process.env.GRAPHQL_API_TOKEN;
+  // --- DEBUG LOGS START ---
+  console.log("--- DEBUG AUTH ---");
+  console.log("Server Expected:", expected);
+  console.log("Client Sent Header:", req.headers.authorization);
+  // --- DEBUG LOGS END ---
   if (!expected) {
     // ป้องกันพลาด: ถ้าไม่ตั้งค่า token ไว้ ให้ fail ไปเลยเพื่อความปลอดภัย
     const err = new Error("Server misconfigured: GRAPHQL_API_TOKEN is missing");
