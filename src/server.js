@@ -21,14 +21,17 @@ const db = require("./models");
 
 require("dotenv").config();
 
+/** ✅ Helper: อ่าน Bearer token */
+function getBearerToken(req) {
+  const h = req.headers.authorization || req.headers.Authorization || "";
+  if (typeof h !== "string") return null;
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : null;
+}
+
 /** ✅ Helper: enforce auth */
 function assertAuth(req) {
   const expected = process.env.GRAPHQL_API_TOKEN;
-
-  // 1. Log what the server expects (Mask part of it for security if you want)
-  console.log("--- DEBUG AUTH ---");
-  console.log("Server Expected Token:", expected);
-
   if (!expected) {
     // ป้องกันพลาด: ถ้าไม่ตั้งค่า token ไว้ ให้ fail ไปเลยเพื่อความปลอดภัย
     const err = new Error("Server misconfigured: GRAPHQL_API_TOKEN is missing");
@@ -36,15 +39,8 @@ function assertAuth(req) {
     throw err;
   }
 
+  // This line caused your error because getBearerToken was missing:
   const token = getBearerToken(req);
-
-  // 2. Log what the server actually received
-  console.log("Client Sent Header:", req.headers.authorization);
-  console.log("Extracted Token:", token);
-
-  // 3. Compare precisely
-  console.log("Do they match?", token === expected);
-  console.log("------------------");
 
   if (!token || token !== expected) {
     const err = new Error("Unauthorized");
