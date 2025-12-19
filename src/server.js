@@ -21,6 +21,42 @@ const db = require("./models");
 
 require("dotenv").config();
 
+// ✅ 1. Cleanup the Allow List (Remove trailing slashes to prevent mismatch errors)
+// This fixes the issue where "https://site.com/" doesn't match "https://site.com"
+const rawOrigins = [
+  "https://studio.apollographql.com",
+  "http://localhost:3000",
+  process.env.FRONTEND_URL // ensure this is set in Railway!
+];
+
+const allowList = rawOrigins.map(url => {
+  return url ? url.replace(/\/$/, "") : null; // Remove trailing slash
+}).filter(Boolean);
+
+console.log("--- Allowed CORS Origins ---");
+console.log(allowList);
+console.log("----------------------------");
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // A. Allow requests with no origin (like Server-side rendering or Postman)
+    if (!origin) return callback(null, true);
+
+    // B. Check against list (clean the incoming origin too)
+    const cleanOrigin = origin.replace(/\/$/, "");
+
+    if (allowList.includes(cleanOrigin)) {
+      return callback(null, true);
+    } else {
+      console.log(`CORS BLOCKED: ${origin}`); // <--- This will show you the real culprit in logs
+      return callback(new Error(`Not allowed by CORS: ${origin}`));
+    }
+  },
+  credentials: true,
+  // Ensure 'authorization' is here (it was in your code, which is good)
+  allowedHeaders: ["content-type", "authorization", "apollo-require-preflight", "x-apollo-operation-name", "apollo-operation-name"],
+};
+
 /** ✅ Helper: อ่าน Bearer token */
 function getBearerToken(req) {
   const h = req.headers.authorization || req.headers.Authorization || "";
