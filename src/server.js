@@ -125,17 +125,8 @@ async function startServer() {
     cors(corsOptions),
     graphqlUploadExpress({ maxFileSize: 20 * 1024 * 1024, maxFiles: 10 }),
     express.json({ limit: "10mb" }),
-    expressMiddleware(new ApolloServer({
-      typeDefs,
-      resolvers: { Upload: GraphQLUpload, ...resolvers },
-      introspection: true,
-      plugins: [
-        ApolloServerPluginDrainHttpServer({ httpServer }),
-        ApolloServerPluginLandingPageLocalDefault({ embed: true }),
-      ],
-    }), {
+    expressMiddleware(server, {
       context: async ({ req, res }) => {
-        // Run Auth Check
         const auth = assertAuth(req);
         return { req, res, auth };
       },
