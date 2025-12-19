@@ -21,7 +21,7 @@ const db = require("./models");
 
 require("dotenv").config();
 
-/** ✅ Helper: อ่าน Bearer token */
+/** Helper: อ่าน Bearer token */
 function getBearerToken(req) {
   const h = req.headers.authorization || req.headers.Authorization || "";
   if (typeof h !== "string") return null;
@@ -29,7 +29,7 @@ function getBearerToken(req) {
   return m ? m[1].trim() : null;
 }
 
-/** ✅ Helper: enforce auth */
+/** Helper: enforce auth */
 function assertAuth(req) {
   const expected = process.env.GRAPHQL_API_TOKEN;
   // --- DEBUG LOGS START ---
@@ -123,16 +123,22 @@ async function startServer() {
   app.use(
     "/graphql",
     cors(corsOptions),
-    graphqlUploadExpress({ maxFileSize: 20 * 1024 * 1024, maxFiles: 10 }),
-    express.json({ limit: "10mb" }),
+    express.json(),
     expressMiddleware(server, {
       context: async ({ req, res }) => {
-        const auth = assertAuth(req);
-        return { req, res, auth };
+        const token = getBearerToken(req);
+        const expected = process.env.GRAPHQL_API_TOKEN;
+
+        const auth = (token && token === expected);
+
+        return {
+          req,
+          res,
+          auth
+        };
       },
     })
   );
-
   const PORT = process.env.PORT || 4000;
 
   console.log("Attempting to connect to the database...");
