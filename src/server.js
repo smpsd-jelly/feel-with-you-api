@@ -6,13 +6,8 @@ const fs = require("fs");
 
 const { ApolloServer } = require("@apollo/server");
 const { expressMiddleware } = require("@apollo/server/express4");
-const {
-  ApolloServerPluginDrainHttpServer,
-} = require("@apollo/server/plugin/drainHttpServer");
-const {
-  ApolloServerPluginLandingPageLocalDefault,
-} = require("@apollo/server/plugin/landingPage/default");
-
+const { ApolloServerPluginDrainHttpServer } = require("@apollo/server/plugin/drainHttpServer");
+const { ApolloServerPluginLandingPageLocalDefault } = require("@apollo/server/plugin/landingPage/default");
 const { graphqlUploadExpress, GraphQLUpload } = require("graphql-upload-ts");
 
 const typeDefs = require("./schema");
@@ -21,43 +16,7 @@ const db = require("./models");
 
 require("dotenv").config();
 
-// ✅ 1. Cleanup the Allow List (Remove trailing slashes to prevent mismatch errors)
-// This fixes the issue where "https://site.com/" doesn't match "https://site.com"
-const rawOrigins = [
-  "https://studio.apollographql.com",
-  "http://localhost:3000",
-  process.env.FRONTEND_URL // ensure this is set in Railway!
-];
-
-const allowList = rawOrigins.map(url => {
-  return url ? url.replace(/\/$/, "") : null; // Remove trailing slash
-}).filter(Boolean);
-
-console.log("--- Allowed CORS Origins ---");
-console.log(allowList);
-console.log("----------------------------");
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    // A. Allow requests with no origin (like Server-side rendering or Postman)
-    if (!origin) return callback(null, true);
-
-    // B. Check against list (clean the incoming origin too)
-    const cleanOrigin = origin.replace(/\/$/, "");
-
-    if (allowList.includes(cleanOrigin)) {
-      return callback(null, true);
-    } else {
-      console.log(`CORS BLOCKED: ${origin}`); // <--- This will show you the real culprit in logs
-      return callback(new Error(`Not allowed by CORS: ${origin}`));
-    }
-  },
-  credentials: true,
-  // Ensure 'authorization' is here (it was in your code, which is good)
-  allowedHeaders: ["content-type", "authorization", "apollo-require-preflight", "x-apollo-operation-name", "apollo-operation-name"],
-};
-
-/** ✅ Helper: อ่าน Bearer token */
+/** Helper: Extract Bearer token */
 function getBearerToken(req) {
   const h = req.headers.authorization || req.headers.Authorization || "";
   if (typeof h !== "string") return null;
@@ -65,25 +24,31 @@ function getBearerToken(req) {
   return m ? m[1].trim() : null;
 }
 
-/** ✅ Helper: enforce auth */
+/** Helper: Enforce Auth */
 function assertAuth(req) {
-  const expected = process.env.GRAPHQL_API_TOKEN;
-  // --- DEBUG LOGS START ---
-  console.log("--- DEBUG AUTH ---");
-  console.log("Server Expected:", expected);
-  console.log("Client Sent Header:", req.headers.authorization);
-  // --- DEBUG LOGS END ---
-  if (!expected) {
-    // ป้องกันพลาด: ถ้าไม่ตั้งค่า token ไว้ ให้ fail ไปเลยเพื่อความปลอดภัย
-    const err = new Error("Server misconfigured: GRAPHQL_API_TOKEN is missing");
-    err.statusCode = 500;
-    throw err;
+  // 1. Check for Introspection (Allow Apollo Studio to work)
+  if (req.body && req.body.operationName === "IntrospectionQuery") {
+    return null;
   }
 
-  // This line caused your error because getBearerToken was missing:
+  // 2. Check for Login/Register (Allow public access to get a token)
+  // WARNING: Ensure your frontend sends 'operationName': 'Login' exactly!
+  if (req.body && (req.body.operationName === "Login" || req.body.operationName === "Register")) {
+    return null;
+  }
+
+  const expected = process.env.GRAPHQL_API_TOKEN;
+
+  // Safety check: Server config must exist
+  if (!expected) {
+    throw new Error("Server misconfigured: GRAPHQL_API_TOKEN is missing");
+  }
+
   const token = getBearerToken(req);
 
+  // Strict Token Check
   if (!token || token !== expected) {
+    // If you want to use meaningful errors, you can throw GraphQLError here instead
     const err = new Error("Unauthorized");
     err.statusCode = 401;
     throw err;
@@ -96,94 +61,88 @@ async function startServer() {
   const app = express();
   const httpServer = http.createServer(app);
 
-  // ---------- Static ----------
+  // ---------- Static Files ----------
   const IMAGES_ROOT = path.join(process.cwd(), "images");
-  app.use("/images", express.static(IMAGES_ROOT, { fallthrough: false }));
+  app.use("/images", express.static(IMAGES_ROOT));
 
   const UPLOAD_ROOT = path.join(process.cwd(), "public", "upload");
-  if (!fs.existsSync(UPLOAD_ROOT))
-    fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
+  if (!fs.existsSync(UPLOAD_ROOT)) fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
   app.use("/uploads", express.static(UPLOAD_ROOT));
 
-  // ---------- CORS ----------
-  const allowList = new Set(
-    [
-      "https://studio.apollographql.com",
-      "http://localhost:3000",
-      process.env.FRONTEND_URL, // ถ้ามี ngrok ให้ใส่ https://xxxx.ngrok-free.app
-    ].filter(Boolean)
-  );
+  // ---------- CORS Configuration (Consolidated) ----------
+  // Define raw origins
+  const rawOrigins = [
+    "https://studio.apollographql.com",
+    "http://localhost:3000",
+    process.env.FRONTEND_URL
+  ];
+
+  // Clean them (remove trailing slashes and nulls)
+  const allowList = rawOrigins
+    .filter(Boolean)
+    .map(url => url.replace(/\/$/, ""));
 
   const corsOptions = {
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true); // allow non-browser tools
-      if (allowList.has(origin)) return cb(null, true);
-      return cb(new Error(`Not allowed by CORS: ${origin}`));
+    origin: (origin, callback) => {
+      // Allow non-browser requests (Postman, Server-to-Server)
+      if (!origin) return callback(null, true);
+
+      // Clean incoming origin to match our list
+      const cleanOrigin = origin.replace(/\/$/, "");
+
+      if (allowList.includes(cleanOrigin)) {
+        return callback(null, true);
+      } else {
+        console.log(`❌ CORS BLOCKED: ${origin}`);
+        return callback(new Error(`Not allowed by CORS`));
+      }
     },
     credentials: true,
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: [
-      "content-type",
-      "authorization",
-      "apollo-require-preflight",
-      "x-apollo-operation-name",
-      "apollo-operation-name",
-    ],
+    allowedHeaders: ["content-type", "authorization", "apollo-require-preflight", "x-apollo-operation-name", "apollo-operation-name"],
   };
 
-  // ✅ ให้ preflight ผ่าน
+  // ---------- Middleware Setup ----------
+
+  // 1. Handle Preflight
   app.options("/graphql", cors(corsOptions));
 
-  // IMPORTANT: upload middleware ต้องมาก่อน expressMiddleware
+  // 2. Main Entry Point
   app.use(
     "/graphql",
     cors(corsOptions),
     graphqlUploadExpress({ maxFileSize: 20 * 1024 * 1024, maxFiles: 10 }),
-    express.json({ limit: "10mb" })
-  );
-
-  // ---------- Apollo Server v4 ----------
-  const server = new ApolloServer({
-    typeDefs,
-    resolvers: { Upload: GraphQLUpload, ...resolvers },
-    introspection: true,
-    plugins: [
-      ApolloServerPluginDrainHttpServer({ httpServer }),
-      ApolloServerPluginLandingPageLocalDefault({ embed: true }),
-    ],
-  });
-
-  await server.start();
-
-  app.use(
-    "/graphql",
-    expressMiddleware(server, {
+    express.json({ limit: "10mb" }),
+    expressMiddleware(new ApolloServer({
+      typeDefs,
+      resolvers: { Upload: GraphQLUpload, ...resolvers },
+      introspection: true,
+      plugins: [
+        ApolloServerPluginDrainHttpServer({ httpServer }),
+        ApolloServerPluginLandingPageLocalDefault({ embed: true }),
+      ],
+    }), {
       context: async ({ req, res }) => {
-        // ✅ บังคับตรวจ token “ก่อนทุกกรณี”
-        // ถ้าอยาก whitelist บาง query (เช่น login) ค่อยเพิ่มเงื่อนไขเองทีหลัง
+        // Run Auth Check
         const auth = assertAuth(req);
-
-        return {
-          req,
-          res,
-          auth, // { token }
-        };
+        return { req, res, auth };
       },
     })
   );
 
+  // ---------- Start ----------
   const PORT = process.env.PORT || 4000;
 
-  console.log("Attempting to connect to the database...");
-
   try {
+    console.log("Connecting to database...");
     await db.sequelize.sync();
-    console.log("Database connected!");
+    console.log("✅ Database connected!");
 
     await new Promise((resolve) => httpServer.listen({ port: PORT }, resolve));
-    console.log(`Server ready at http://0.0.0.0:${PORT}/graphql`);
+    console.log(` Server ready at http://0.0.0.0:${PORT}/graphql`);
+    console.log(`  CORS Whitelist:`, allowList);
+
   } catch (err) {
-    console.error("Database Connection Failed:", err);
+    console.error(" Startup Error:", err);
     process.exit(1);
   }
 }
