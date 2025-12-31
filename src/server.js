@@ -144,7 +144,7 @@ async function startServer() {
   console.log("Attempting to connect to the database...");
 
   try {
-    await db.sequelize.sync();
+    // await db.sequelize.sync();
     console.log("Database connected!");
 
     await new Promise((resolve) => httpServer.listen({ port: PORT }, resolve));
