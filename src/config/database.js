@@ -12,8 +12,10 @@ const sequelize = new Sequelize(
     host: process.env.DB_HOST,
     port: process.env.DB_PORT || 3306,
     dialect: 'mysql',
+    timezone: "+07:00",  
     logging: false, // Turn off SQL logs to keep Railway logs clean
     dialectOptions: isProduction ? {
+      timezone: "+07:00",
       ssl: {
         require: true,
         rejectUnauthorized: false // Required for Railway/Cloud DBs

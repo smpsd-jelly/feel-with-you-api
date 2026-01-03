@@ -4,6 +4,7 @@ const fsp = require("fs/promises");
 const crypto = require("crypto");
 const db = require("../models");
 const { UserNoteImage, UserNote, Users } = db;
+const { toThaiISOString, now } = require("../../helper/thThime");
 
 const NOTES_DIR = path.join(process.cwd(), "public", "upload", "notes");
 
@@ -83,7 +84,7 @@ const userNoteImageResolvers = {
         const created = await UserNoteImage.create({
           user_note_id,
           img_url,
-          created_at: new Date(),
+          created_at: now(),
         });
 
         const row = await UserNoteImage.findByPk(created.id, {
@@ -135,7 +136,7 @@ const userNoteImageResolvers = {
         const created = await UserNoteImage.create({
           user_note_id,
           img_url,
-          created_at: new Date(),
+          created_at: now(),
         });
         results.push(created);
       }
@@ -149,8 +150,7 @@ const userNoteImageResolvers = {
   },
 
   UserNoteImage: {
-    created_at: (p) =>
-      p.created_at ? new Date(p.created_at).toISOString() : null,
+    created_at: (p) => toThaiISOString(p.created_at),
   },
 };
 

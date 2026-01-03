@@ -1,5 +1,6 @@
 const db = require("../models");
 const { MoodMusic, Mood } = db;
+const { toThaiISOString } = require("../../helper/thThime");
 
 const moodMusicResolvers = {
   Query: {
@@ -29,8 +30,7 @@ const moodMusicResolvers = {
   },
 
   MoodMusic: {
-    created_at: (parent) =>
-      parent.created_at ? new Date(parent.created_at).toISOString() : null,
+    created_at: (parent) => toThaiISOString(parent.created_at),
   },
 };
 

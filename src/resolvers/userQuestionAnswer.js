@@ -1,7 +1,8 @@
-const db = require('../models');
+const db = require("../models");
 const { Sequelize } = db;
 const { UserQuestionAnswer } = db;
 const { Op } = require("sequelize");
+const { normalizeThaiDayRange, now } = require("../../helper/thThime");
 
 const userQuestionAnswerResolvers = {
   Query: {
@@ -12,11 +13,11 @@ const userQuestionAnswerResolvers = {
 
         return await UserQuestionAnswer.findAll({
           where,
-          order: [['id', 'ASC']],
+          order: [["id", "ASC"]],
         });
       } catch (err) {
-        console.error('getAllUserQuestionAnswers error:', err);
-        throw new Error('Internal Server Error');
+        console.error("getAllUserQuestionAnswers error:", err);
+        throw new Error("Internal Server Error");
       }
     },
 
@@ -26,12 +27,12 @@ const userQuestionAnswerResolvers = {
         // ดึงแบบ group โดยใช้ COUNT(status)
         const rows = await UserQuestionAnswer.findAll({
           attributes: [
-            'status',
-            [db.sequelize.fn('COUNT', db.sequelize.col('status')), 'count'],
+            "status",
+            [db.sequelize.fn("COUNT", db.sequelize.col("status")), "count"],
           ],
           where: { user_id },
-          group: ['status'],
-          order: [[db.sequelize.literal('count'), 'DESC']],
+          group: ["status"],
+          order: [[db.sequelize.literal("count"), "DESC"]],
           raw: true,
         });
 
@@ -59,8 +60,8 @@ const userQuestionAnswerResolvers = {
           mostCommonCount,
         };
       } catch (err) {
-        console.error('getUserAnswerStats error:', err);
-        throw new Error('Internal Server Error');
+        console.error("getUserAnswerStats error:", err);
+        throw new Error("Internal Server Error");
       }
     },
   },
@@ -69,13 +70,12 @@ const userQuestionAnswerResolvers = {
     addBulkUserQuestionAnswers: async (_, { user_id, answers }) => {
       try {
         // คำนวน Start & End of "Today" in GMT+7
-        const now = new Date();
-        const THAI_OFFSET = 7 * 60 * 60 * 1000;
-        const thaiTime = new Date(now.getTime() + THAI_OFFSET);
-        thaiTime.setUTCHours(0, 0, 0, 0);
+        const { start: startOfDay, end: endOfDay } = normalizeThaiDayRange(
+          now()
+        );
 
-        const startOfDay = new Date(thaiTime.getTime() - THAI_OFFSET);
-        const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+        // ✅ replace now usage for insert timestamps
+        const ts = now();
 
         // Validation: Check if user has ALREADY submitted answers today
         const existingSession = await UserQuestionAnswer.findOne({
@@ -89,7 +89,9 @@ const userQuestionAnswerResolvers = {
         });
 
         if (existingSession) {
-          throw new Error("You have already submitted your answers for today. Please try again tomorrow.");
+          throw new Error(
+            "You have already submitted your answers for today. Please try again tomorrow."
+          );
         }
 
         // Prepare data for Bulk Insert
@@ -98,17 +100,19 @@ const userQuestionAnswerResolvers = {
           question_id: answer.question_id,
           question_status: answer.question_status,
           question_score: answer.question_score,
-          created_at: now,
-          updated_at: now,
+          created_at: ts,
+          updated_at: ts,
         }));
 
         // Perform Bulk Insert
-        const newRecords = await UserQuestionAnswer.bulkCreate(dataToInsert, { validate: true });
+        const newRecords = await UserQuestionAnswer.bulkCreate(dataToInsert, {
+          validate: true,
+        });
 
         return newRecords;
       } catch (err) {
         // log errors in Mutation a
-        console.error('addBulkUserQuestionAnswers error:', err);
+        console.error("addBulkUserQuestionAnswers error:", err);
         throw err; // Re-throw so GraphQL returns the error to the client
       }
     },

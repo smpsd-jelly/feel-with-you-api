@@ -1,6 +1,11 @@
 const db = require("../models");
 const { Op } = require("sequelize");
 const { UserNote, Users, UserNoteImage } = db;
+const {
+  toThaiISOString,
+  normalizeThaiDayRange,
+  now,
+} = require("../../helper/thThime");
 
 const userNoteResolvers = {
   Query: {
@@ -64,10 +69,8 @@ const userNoteResolvers = {
     createUserNote: async (_, { input }) => {
       const { user_id, note_text, note_date } = input;
 
-      // ผูกให้แน่ใจว่าเป็น date-only string
-      const todayStr = note_date
-        ? new Date(note_date).toISOString().slice(0, 10)
-        : new Date().toISOString().slice(0, 10);
+      const { start } = normalizeThaiDayRange(note_date ?? now());
+      const todayStr = toThaiISOString(start).slice(0, 10);
 
       try {
         // เงื่อนไขระดับ app
@@ -82,7 +85,7 @@ const userNoteResolvers = {
           user_id,
           note_text: note_text ?? null,
           note_date: todayStr,
-          created_at: new Date(),
+          created_at: now,
         });
 
         return await UserNote.findByPk(created.id, {
@@ -152,8 +155,7 @@ const userNoteResolvers = {
   UserNote: {
     note_date: (p) =>
       p.note_date ? new Date(p.note_date).toISOString() : null,
-    created_at: (p) =>
-      p.created_at ? new Date(p.created_at).toISOString() : null,
+    created_at: (p) => toThaiISOString(p.created_at),
 
     images: async (parent) => {
       return await UserNoteImage.findAll({
