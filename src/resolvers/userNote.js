@@ -85,7 +85,7 @@ const userNoteResolvers = {
           user_id,
           note_text: note_text ?? null,
           note_date: todayStr,
-          created_at: now,
+          created_at: now(),
         });
 
         return await UserNote.findByPk(created.id, {
@@ -153,8 +153,7 @@ const userNoteResolvers = {
   },
 
   UserNote: {
-    note_date: (p) =>
-      p.note_date ? new Date(p.note_date).toISOString() : null,
+    note_date: (p) => p.note_date ?? null,
     created_at: (p) => toThaiISOString(p.created_at),
 
     images: async (parent) => {
